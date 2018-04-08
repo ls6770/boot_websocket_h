@@ -1,0 +1,233 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta HTTP-EQUIV="Content-Type" content="text/html;charset=utf-8">
+    <title>表格</title>
+    <style type="text/css">
+        #container {
+            min-width: 310px;
+            max-width: 800px;
+            height: 400px;
+            margin: 0 auto
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<div><input type="button" onclick="openSend"/><input type="button" onclick="closeSend"/></div>
+    <script type="text/javascript" src="../../static/js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="../../static/js/highcharts.js"></script>
+    <script type="text/javascript">
+        // 图表构建
+        var chartSeries = new Array();
+
+        function createChart(){
+            var highcharts = Highcharts.chart("container",{
+                chart:{
+                    type:"spline",
+                    animaiton:"Highcharts.svg",
+                    marginRight:20,
+                    event:{
+                        load:function(){
+                            chartSeries = this.series;
+                        }
+                    }
+                },
+                zoomType:"x",
+                //图表标题
+                title:{
+                    text:"可以实时更新数据的图表Demo"
+                },
+                xAxis:{
+                    type : 'datetime',
+                    tickWidth : 1,
+                    labels : {
+                        x : 0,
+                        y : 20,
+                        style : {
+                            color : '#000000'
+                        },
+                        formatter : function() {
+                            return Highcharts.dateFormat('%H:%M:%S', this.value);//����ʱ����ʾ��ʽ
+                        }
+                    }
+
+                },
+                //y轴
+                yAxis:{
+                    title:{
+                        text:"y轴标题"
+                    },
+                    plotLines : [ {
+                        value : 0,
+                        width : 10,
+                        color : '#808080'
+                    } ]
+                },
+                //图例
+                Legend:{
+                    enable:true,
+                    layout:"vertical",
+                    align:"right",
+                    verticalAlign:"middle"
+                },
+                //x轴节点设置
+                plotOptions:{
+                    series:{
+                        allowPointSelect: true,
+                        label:{
+                            connectorAllowed:false
+                        },
+                        pointStart:2010
+                    },
+                    spline:{
+
+                    }
+                },
+                series:[{
+                    name:"心率",
+                    color:"#F93C27",
+                    data:[]
+                },{
+                    name:"脉搏",
+                    color:"#1C1EAA",
+                    data:[]
+                }],
+                //数据提示框
+                tooltip:{
+                    backgroundColor:"#FCFFC5",
+                    borderColor:"black",
+                    borderRadius: 10,
+                    borderWidth:0.5,
+                    shadow:true,
+                    animation:true,
+                    style:{
+                        color:"#ff0000",
+                        fontSize:"12px",
+                        fontWeight:"blod",
+                        fontFamily:"Courir new"
+                    }
+                },
+                responsive:{
+                    rule:[{
+                        condition:{
+                            maxWidth:500,
+                            chartOptions:{
+                                legend:{
+                                    layout:"horizontal",
+                                    align:"center",
+                                    verticalAlign:"bottom"
+                                }
+                            }
+                        }
+                    }]
+                },
+                //版权标签
+                credits:{
+                    enabled:false
+                }
+            })
+
+            // highcharts.series.push(appData.series);
+            // 循环遍历appData中的series,去除index和value值，并放入表格中，采用表格函数.series.push方法
+            // $.each(appData.series, function(index, value) {
+            //     highcharts.series.push({
+            //         name : value.name,
+            //         color: value.color,
+            //         data : value.data,
+            //         lineWidth : 1,
+            //     });
+            // });
+            // return highcharts;
+            return highcharts;
+        }
+
+        function createDataSeries(inputData ,chartOptions){
+            var input_json={
+                series:[]
+            }
+            //inputData={date:now,heartbeat:70,maibo:100}初始化数据json格式
+            //增加判断数据类型是心率还是脉搏，心率=0，脉搏=1
+            var data1 = [];
+            var data2 = [];
+            //放入数据
+            // $.each(inputData,function(index,val){
+                data1.push({
+                    name:"心率",
+                    color:"#F93C27",
+                    x: inputData.date,
+                    y: inputData.heartbeat
+                });
+                data2.push({
+                    name:"脉搏",
+                    color:"#1C1EAA",
+                    x: inputData.date,
+                    y: inputData.maibo
+                })
+            // });
+            input_json.series.push({
+                    name:"心率",
+                    color:"#F93C27",
+                    data:data1
+                },{
+                    name:"脉搏",
+                    color:"#1C1EAA",
+                    data:data2
+                });
+            // $.each(input_json.series,function(index,val){
+            chartOptions.series[0].addPoint([inputData.date,inputData.heartbeat],true,false);
+            chartOptions.series[1].addPoint([inputData.date,inputData.maibo],true,false);
+            // });
+
+        }
+        $(document).ready(function () {
+
+            //获取后台websocket传输的数据 ,结构形式为“ws：//ip:端口/项目名/指定的url”
+            var ws = new WebSocket("ws://localhost:9090/websocket");
+            //用于指定连接成功后的回调函数。
+            ws.onopen = function(event){
+                //连接成功创建
+                var chartOptions = createChart();
+
+                //用于指定连接关闭后的回调函数。
+                ws.onclose= function(event){
+
+                }
+
+                //用于指定收到服务器数据后的回调函数。
+                ws.onmessage=function(event){
+                    var data = event.data;
+                    //处理数据，调用构建图表方法
+                    var obj = eval("("+data+")");
+                    console.log(obj);
+                    createDataSeries(obj, chartOptions);
+                }
+
+                //用于指定报错时的回调函数。
+                ws.onerror = function(){
+
+                }
+
+            }
+        });
+
+
+        function openSend(){
+            $.ajax({
+                url:"../websocket/web",
+                success:function (data){
+                    console.log("启动成功");
+                },
+                error:function(){
+                    console.log("启动失败");
+                }
+            })
+        }
+
+        function closeSend(){
+
+        }
+    </script>
+</body>
+</html>
